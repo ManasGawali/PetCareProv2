@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  fullName    String
+  phone       String?
+  avatar      String?
+  role        Role     @default(CUSTOMER)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  pets        Pet[]
+  bookings    Booking[]
+  addresses   Address[]
+  cartItems   CartItem[]
+  reviews     Review[]
+
+  @@map("users")
+}
+
+model Pet {
+  id           String    @id @default(cuid())
+  name         String
+  type         String    // dog, cat, bird, etc.
+  breed        String?
+  age          Int?
+  weight       Float?
+  photo        String?
+  specialNotes String?
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("pets")
+}
+
+model Service {
+  id          String          @id @default(cuid())
+  name        String
+  category    ServiceCategory
+  description String
+  price       Float
+  duration    Int             // in minutes
+  imageUrl    String?
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  bookings Booking[]
+
+  @@map("services")
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  status       BookingStatus @default(PENDING)
+  scheduledAt  DateTime
+  completedAt  DateTime?
+  totalPrice   Float
+  notes        String?
+  address      String
+  phone        String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Foreign Keys
+  userId    String
+  petId     String
+  serviceId String
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet     Pet     @relation(fields: [petId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  review  Review?
+
+  @@map("bookings")
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  category    ProductCategory
+  description String
+  price       Float
+  imageUrl    String?
+  stock       Int           @default(0)
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  cartItems CartItem[]
+
+  @@map("products")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign Keys
+  userId    String
+  productId String
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("cart_items")
+}
+
+model Address {
+  id       String      @id @default(cuid())
+  type     AddressType @default(HOME)
+  street   String
+  city     String
+  state    String
+  zipCode  String
+  country  String      @default("India")
+  isDefault Boolean    @default(false)
+  userId   String
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("addresses")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign Keys
+  userId    String
+  bookingId String   @unique
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+// Enums
+enum Role {
+  CUSTOMER
+  ADMIN
+  SERVICE_PROVIDER
+}
+
+enum ServiceCategory {
+  GROOMING
+  WALKING
+  SITTING
+  TRAINING
+  VETERINARY
+  BOARDING
+  BATH_SPA
+}
+
+enum ProductCategory {
+  FOOD
+  ACCESSORIES
+  TOYS
+  HEALTH
+  GROOMING_SUPPLIES
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
